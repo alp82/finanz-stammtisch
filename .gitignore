@@ -1,0 +1,7 @@
+# Throwaway design/exploration prototypes (kept local only)
+.prototypes/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
