@@ -36,6 +36,14 @@
   .sub { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
   .side-scroll { overflow-y: auto; flex: 1; }
 
+  /* mode toggle (Personen / Treffpunkt) */
+  .seg { display: flex; gap: 4px; margin-top: 14px; background: #0b0e11; border: 1px solid #2a333c; border-radius: 10px; padding: 3px; }
+  .seg-b { flex: 1; background: none; border: none; border-radius: 8px; padding: 7px 0; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--muted); cursor: pointer; transition: background .15s, color .15s; }
+  .seg-b.on { background: var(--amber); color: #101418; }
+  .mode { display: none; }
+  .mode.on { display: block; }
+  .grip { display: none; }
+
   /* city list */
   .cities { padding: 12px 12px 6px; }
   .b-city { padding: 10px 12px; border-radius: 10px; cursor: pointer; margin-bottom: 2px; transition: background .15s; }
@@ -46,11 +54,15 @@
   .b-city .m { font-size: 12.5px; color: #9aa3ad; margin-top: 3px; line-height: 1.5; }
 
   /* Treffpunkt-Check panel */
-  .panel { padding: 16px; border-top: 1px solid #1c2228; }
+  .panel { padding: 16px; }
   .panel-kick { font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted2); }
-  .picker { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-  .picker select { flex: 1; background: #0b0e11; color: var(--ink); border: 1px solid #2a333c; border-radius: 9px; padding: 9px 10px; font: inherit; font-size: 14px; font-weight: 600; }
   .prompt { color: var(--muted2); font-size: 13px; font-style: italic; margin-top: 14px; line-height: 1.5; }
+
+  /* candidate city list (tap to check as Treffpunkt) */
+  .cand { margin: 4px -4px 0; }
+  .cand .b-city { padding: 8px 12px; }
+  .cand .b-city.active { background: #1c232b; box-shadow: inset 0 0 0 1.5px var(--amber); }
+  .cand .b-city .c .hint { font-size: 10.5px; color: var(--muted2); text-transform: uppercase; letter-spacing: .6px; }
 
   .summary { display: flex; gap: 8px; margin-top: 14px; }
   .stat { flex: 1; background: #12171c; border: 1px solid #1f262d; border-radius: 11px; padding: 10px 12px; }
@@ -70,27 +82,17 @@
   .dist-row.worst .km { color: var(--far); }
   .dist-row.home .nm { color: var(--near); }
 
-  /* attendee filter */
-  .att { padding: 14px 12px 28px; border-top: 1px solid #1c2228; }
-  .att-head { display: flex; align-items: center; justify-content: space-between; padding: 0 8px 2px; }
-  .att-head .t { font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted2); }
-  .att-head button { background: none; border: none; color: var(--amber); font: inherit; font-size: 11.5px; cursor: pointer; }
-  .att-count { font-size: 11.5px; color: var(--muted); padding: 4px 8px 6px; }
   .cg-name { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted2); padding: 8px 8px 2px; }
-  .mrow { display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: 8px; cursor: pointer; user-select: none; }
-  .mrow:hover { background: #12171c; }
-  .mrow .dot { width: 15px; height: 15px; flex: 0 0 15px; border-radius: 5px; border: 1.5px solid #3a444e; display: grid; place-items: center; }
-  .mrow.on .dot { background: var(--amber); border-color: var(--amber); }
-  .mrow .dot svg { width: 9px; height: 9px; opacity: 0; }
-  .mrow.on .dot svg { opacity: 1; }
-  .mrow .nm { font-size: 13px; }
-  .mrow.off .nm { color: var(--muted2); text-decoration: line-through; }
 
   /* ---------- map ---------- */
-  #map { flex: 1; height: 100%; }
+  #map { flex: 1; min-width: 0; height: 100%; }
 
   /* variant-E card pins: all info inside, no popups */
-  .pinE { position: relative; background: rgba(16,20,24,.92); color: var(--ink); border-radius: 12px; padding: 8px 12px; box-shadow: 0 3px 12px rgba(0,0,0,.35); font-size: 12px; line-height: 1.45; cursor: pointer; }
+  /* NOTE: no `position` here — MapLibre positions the marker element via its own
+     `.maplibregl-marker { position:absolute }`. A same-specificity rule loaded after
+     maplibre-gl.css (e.g. `position:relative`) would override it, drop every card into
+     normal flow, and clump them off-map. The absolute element still anchors `::after`. */
+  .pinE { background: rgba(16,20,24,.92); color: var(--ink); border-radius: 12px; padding: 8px 12px; box-shadow: 0 3px 12px rgba(0,0,0,.35); font-size: 12px; line-height: 1.45; cursor: pointer; }
   .pinE::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%); border: 10px solid transparent; }
   .pinE.tail-b::after { top: 100%; border-top-color: rgba(16,20,24,.92); }
   .pinE.tail-t::after { bottom: 100%; border-bottom-color: rgba(16,20,24,.92); }
@@ -107,37 +109,59 @@
   .pinE.sel { box-shadow: 0 0 0 2px var(--amber), 0 3px 12px rgba(0,0,0,.45); }
 
   /* neutral candidate pins (dashed hollow) */
-  .npin { position: relative; }
+  /* no `position` here — same reason as `.pinE`: MapLibre makes the `.npin` marker
+     element absolute, and a `position:relative` override drops the dots into normal
+     flow and clumps them off-map. `.lbl` still anchors to the absolute `.npin`. */
   .npin .dot { width: 16px; height: 16px; border-radius: 50%; background: #101418; border: 2px dashed #4a555f; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
   .npin.sel .dot { border-style: solid; border-color: var(--amber); box-shadow: 0 0 0 5px rgba(245,158,11,.2), 0 2px 8px rgba(0,0,0,.6); }
   .npin .lbl { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 2px; white-space: nowrap; font-size: 10px; color: var(--muted); text-shadow: 0 1px 3px #000; pointer-events: none; }
 
   @media (max-width: 720px) {
-    #app { flex-direction: column; }
-    #side { width: 100%; flex: 0 0 45%; border-right: none; border-bottom: 1px solid #1c2228; }
-    #map { flex: 1 1 55%; }
+    :root { --peek: 150px; --sheet: 70vh; }
+    #map { position: fixed; inset: 0; height: 100%; }
+    #side {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+      width: 100%; height: var(--sheet);
+      border-right: none; border-top: 1px solid #2a333c;
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -8px 30px rgba(0,0,0,.5);
+      transform: translateY(calc(var(--sheet) - var(--peek)));
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    #side.open { transform: translateY(0); }
+    .grip { display: block; width: 100%; background: none; border: none; padding: 10px 0 4px; cursor: pointer; touch-action: none; }
+    .grip i { display: block; width: 40px; height: 4px; border-radius: 99px; background: #3a444e; margin: 0 auto; }
+    .side-head { padding: 4px 22px 12px; border-bottom: 1px solid #1c2228; }
+    .brand { font-size: 20px; }
+    .sub { margin-top: 4px; }
+    .seg { margin-top: 10px; }
+    .maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right { bottom: var(--peek); }
   }
 </style>
 </head>
 <body>
 <div id="app">
   <aside id="side">
+    <button class="grip" id="grip" aria-label="Liste ein-/ausklappen"><i></i></button>
     <div class="side-head">
       <div class="brand">Finanz-Stammtisch</div>
       <div class="sub" id="subline"></div>
+      <div class="seg" id="modeSeg" role="tablist">
+        <button class="seg-b on" data-mode="personen" role="tab" aria-selected="true">Personen</button>
+        <button class="seg-b" data-mode="treffpunkt" role="tab" aria-selected="false">Treffpunkt</button>
+      </div>
     </div>
     <div class="side-scroll">
-      <div class="cities" id="cityList"></div>
-      <div class="panel">
-        <div class="panel-kick">Treffpunkt-Check &middot; treffen hier?</div>
-        <div class="picker"><select id="citySel"></select></div>
-        <div id="readout"></div>
-      </div>
-      <div class="att">
-        <div class="att-head"><span class="t">Wer kommt?</span><button id="toggleAll"></button></div>
-        <div class="att-count" id="attCount"></div>
-        <div id="attList"></div>
-      </div>
+      <section class="mode on" id="mode-personen">
+        <div class="cities" id="cityList"></div>
+      </section>
+      <section class="mode" id="mode-treffpunkt">
+        <div class="panel">
+          <div class="panel-kick">Treffpunkt-Check &middot; treffen hier?</div>
+          <div class="cand" id="candList"></div>
+          <div id="readout"></div>
+        </div>
+      </section>
     </div>
   </aside>
   <div id="map"></div>
@@ -154,8 +178,8 @@ const CITIES = Object.keys(byCity).map(city => ({ city, members: byCity[city], c
 const N_MEMBERS = DATA.members.length;
 const N_CITIES = CITIES.length;
 
-// members with coords + attendance, for the Treffpunkt-Check
-const MEMBERS = DATA.members.map((m, i) => ({ id: i, name: m.name, city: m.city, attending: true, coords: DATA.cities[m.city] }));
+// members with coords, for the Treffpunkt-Check
+const MEMBERS = DATA.members.map((m, i) => ({ id: i, name: m.name, city: m.city, coords: DATA.cities[m.city] }));
 const coordOf = city => DATA.cities[city] || DATA.neutral[city];
 
 const GERMANY = [[5.5, 47.1], [15.6, 55.2]];
@@ -169,6 +193,49 @@ function distKm(a, b) { // a, b are [lon, lat]
 function sepZoom(dKm, lat) { return Math.log2(260 * 156543.03 * Math.cos(rad(lat)) / (dKm * 1000)); }
 
 document.getElementById("subline").textContent = N_MEMBERS + " Mitglieder in " + N_CITIES + " Städten";
+
+/* ================= sidebar modes ================= */
+const modeSeg = document.getElementById("modeSeg");
+let uiMode = "personen";
+function setMode(mode) {
+  uiMode = mode;
+  modeSeg.querySelectorAll(".seg-b").forEach(b => {
+    const on = b.dataset.mode === mode;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-selected", on);
+  });
+  document.getElementById("mode-personen").classList.toggle("on", mode === "personen");
+  document.getElementById("mode-treffpunkt").classList.toggle("on", mode === "treffpunkt");
+  syncNeutralVis();
+  if (mode === "personen" && selected) {
+    selected = null;
+    markSelection();
+    recompute();
+  }
+}
+modeSeg.addEventListener("click", e => {
+  const b = e.target.closest(".seg-b");
+  if (!b) return;
+  setMode(b.dataset.mode);
+  if (mqMobile.matches) setSheet(true); // tapping a tab reveals its content
+});
+
+/* ================= mobile bottom sheet ================= */
+// Sheet expand/collapse is a pure transform over a fixed full-viewport map,
+// so no map.resize() there - only crossing the breakpoint resizes.
+const mqMobile = window.matchMedia("(max-width: 720px)");
+const side = document.getElementById("side");
+const setSheet = open => side.classList.toggle("open", open);
+document.getElementById("grip").addEventListener("click", () => setSheet(!side.classList.contains("open")));
+let touchY = null;
+document.getElementById("grip").addEventListener("touchstart", e => { touchY = e.touches[0].clientY; }, { passive: true });
+document.getElementById("grip").addEventListener("touchend", e => {
+  if (touchY === null) return;
+  const dy = e.changedTouches[0].clientY - touchY;
+  if (Math.abs(dy) > 24) setSheet(dy < 0);
+  touchY = null;
+});
+mqMobile.addEventListener("change", () => { map.resize(); layout(); });
 
 const map = new maplibregl.Map({
   container: "map", style: "https://tiles.openfreemap.org/styles/liberty",
@@ -192,7 +259,7 @@ const pins = CITIES.map(c => {
   }
   el.innerHTML = '<div class="hd"><span class="k">' + c.members.length + '</span><span class="c">' + c.city + '</span></div><div class="nm">' + names + '</div>';
   el.title = c.city + " als Treffpunkt prüfen";
-  el.addEventListener("click", () => select(c.city));
+  el.addEventListener("click", () => { if (uiMode === "treffpunkt") select(c.city); else zoomToCity(c); });
   const marker = new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat(c.coords).addTo(map);
   return { c, el, marker };
 });
@@ -299,6 +366,9 @@ function aloneZoom(c) {
   for (const o of CITIES) if (o !== c) dmin = Math.min(dmin, distKm(c.coords, o.coords));
   return Math.min(Math.max(sepZoom(dmin, c.coords[1]), 8), 12);
 }
+function zoomToCity(c) {
+  map.flyTo({ center: c.coords, zoom: aloneZoom(c), duration: 900 });
+}
 (function buildCityList() {
   const list = document.getElementById("cityList");
   CITIES.slice().sort((a, b) => b.members.length - a.members.length).forEach(c => {
@@ -307,9 +377,10 @@ function aloneZoom(c) {
     row.dataset.city = c.city;
     row.innerHTML = '<div class="c"><span class="n">' + c.city + '</span><span class="k">' + c.members.length + '</span></div><div class="m">' + c.members.join(", ") + '</div>';
     row.addEventListener("click", () => {
-      document.querySelectorAll(".b-city").forEach(r => r.classList.remove("active"));
+      document.querySelectorAll("#cityList .b-city").forEach(r => r.classList.remove("active"));
       row.classList.add("active");
-      map.flyTo({ center: c.coords, zoom: aloneZoom(c), duration: 900 });
+      if (mqMobile.matches) setSheet(false);
+      zoomToCity(c);
     });
     list.appendChild(row);
   });
@@ -353,35 +424,38 @@ function drawNeutral() {
     neutralPins[city] = wrap;
     new maplibregl.Marker({ element: wrap, anchor: "center" }).setLngLat(DATA.neutral[city]).addTo(map);
   }
+  syncNeutralVis();
+}
+
+// neutral dots are Treffpunkt-only; member pin cards stay visible in both modes
+function syncNeutralVis() {
+  for (const city in neutralPins) neutralPins[city].style.display = uiMode === "treffpunkt" ? "" : "none";
 }
 
 function markSelection() {
   pins.forEach(p => p.el.classList.toggle("sel", selected === p.c.city));
   for (const city in neutralPins) neutralPins[city].classList.toggle("sel", selected === city);
+  document.querySelectorAll("#candList .b-city").forEach(r => r.classList.toggle("active", selected === r.dataset.city));
 }
 
 function select(city) {
+  setMode("treffpunkt");
+  if (mqMobile.matches) setSheet(false);
   selected = city;
-  document.getElementById("citySel").value = city;
   markSelection();
   recompute();
 }
 
-const attending = () => MEMBERS.filter(m => m.attending);
-
 function recompute() {
   const ro = document.getElementById("readout");
-  const a = attending();
   const src = map.getSource("spokes");
-  if (!selected || !a.length) {
-    ro.innerHTML = '<div class="prompt">' + (!a.length
-      ? "Niemand ausgewählt."
-      : "Stadt wählen (Liste oben oder Pin auf der Karte) — dann siehst du, wie weit jede:r fährt und wer es am weitesten hat.") + '</div>';
+  if (!selected) {
+    ro.innerHTML = '<div class="prompt">Stadt antippen (Liste oben oder Pin auf der Karte) — dann siehst du, wie weit jede:r fährt und wer es am weitesten hat.</div>';
     if (src) src.setData({ type: "FeatureCollection", features: [] });
     return;
   }
   const target = coordOf(selected);
-  const rows = a.map(m => ({ m, km: Math.round(distKm(m.coords, target)) })).sort((x, y) => x.km - y.km);
+  const rows = MEMBERS.map(m => ({ m, km: Math.round(distKm(m.coords, target)) })).sort((x, y) => x.km - y.km);
   const max = Math.max(...rows.map(r => r.km), 1);
   const worst = rows[rows.length - 1];
   const avg = Math.round(rows.reduce((s, r) => s + r.km, 0) / rows.length);
@@ -408,47 +482,29 @@ function recompute() {
   if (src) src.setData({ type: "FeatureCollection", features: feats });
 }
 
-// candidate dropdown
-(function buildDropdown() {
-  const sel = document.getElementById("citySel");
-  const opt = list => list.map(c => '<option value="' + c + '">' + c + '</option>').join("");
-  sel.innerHTML = '<option value="">— Stadt wählen —</option>' +
-    '<optgroup label="Mitglied-Städte">' + opt(Object.keys(DATA.cities)) + '</optgroup>' +
-    '<optgroup label="Neutral / zentral">' + opt(Object.keys(DATA.neutral)) + '</optgroup>';
-  sel.addEventListener("change", () => {
-    if (sel.value) select(sel.value);
-    else { selected = null; markSelection(); recompute(); }
-  });
+// candidate list: tap a city to check it as Treffpunkt
+(function buildCandidates() {
+  const list = document.getElementById("candList");
+  const addRow = (city, badge) => {
+    const row = document.createElement("div");
+    row.className = "b-city";
+    row.dataset.city = city;
+    row.innerHTML = '<div class="c"><span class="n">' + city + '</span>' + badge + '</div>';
+    row.addEventListener("click", () => select(city));
+    list.appendChild(row);
+  };
+  const gA = document.createElement("div");
+  gA.className = "cg-name";
+  gA.textContent = "Mitglieder-Städte";
+  list.appendChild(gA);
+  CITIES.slice().sort((a, b) => b.members.length - a.members.length)
+    .forEach(c => addRow(c.city, '<span class="k">' + c.members.length + '</span>'));
+  const gB = document.createElement("div");
+  gB.className = "cg-name";
+  gB.textContent = "Neutrale Städte";
+  list.appendChild(gB);
+  Object.keys(DATA.neutral).forEach(city => addRow(city, '<span class="hint">neutral</span>'));
 })();
-
-// attendee filter "Wer kommt?"
-function buildAtt() {
-  const wrap = document.getElementById("attList");
-  wrap.innerHTML = "";
-  const grouped = {};
-  MEMBERS.forEach(m => (grouped[m.city] = grouped[m.city] || []).push(m));
-  Object.keys(grouped).sort((x, y) => grouped[y].length - grouped[x].length).forEach(city => {
-    const g = document.createElement("div");
-    g.innerHTML = '<div class="cg-name">' + city + '</div>';
-    grouped[city].forEach(m => {
-      const row = document.createElement("div");
-      row.className = "mrow " + (m.attending ? "on" : "off");
-      row.innerHTML = '<span class="dot"><svg viewBox="0 0 12 12"><path d="M2 6.5L5 9.5L10 3" stroke="#1a1205" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="nm">' + m.name + '</span>';
-      row.addEventListener("click", () => { m.attending = !m.attending; buildAtt(); recompute(); });
-      g.appendChild(row);
-    });
-    wrap.appendChild(g);
-  });
-  const on = attending().length;
-  document.getElementById("attCount").textContent = on === N_MEMBERS ? "Alle " + N_MEMBERS + " kommen." : on + " von " + N_MEMBERS + " kommen.";
-  document.getElementById("toggleAll").textContent = on ? "alle abwählen" : "alle auswählen";
-}
-document.getElementById("toggleAll").addEventListener("click", () => {
-  const any = attending().length > 0;
-  MEMBERS.forEach(m => m.attending = !any);
-  buildAtt(); recompute();
-});
-buildAtt();
 </script>
 </body>
 </html>
