@@ -1,7 +1,7 @@
 ---
 title: Finanz-Stammtisch member map — live on GitHub Pages
 labels: [wayfinder:map]
-status: open
+status: closed
 ---
 
 ## Destination
@@ -29,11 +29,12 @@ A simple but beautiful single-page map of the Finanz-Stammtisch members across G
 - [Design the real-life meeting-city helper](tickets/008-meeting-city-helper.md) — a **fairness checker, not a recommender** ("Treffpunkt-Check"): pick any candidate city (member cities + neutral central ones), see Ø travel, the named worst-off member, and everyone sorted near→far with map spokes; straight-line km (mixed car/train), "Wer kommt?" filter re-scopes. No ranking/winner — the three auto-suggest framings (member Treffpunkt / ICE-hub shortlist / centroid) were all rejected. Spec in docs/design-spec.md.
 - [Sharing polish — title, favicon, link preview](tickets/007-sharing-polish.md) — title `Finanz-Stammtisch – Karte` (also og:title); favicon = amber-F monogram SVG on dark; og:description `14 Mitglieder in 9 Städten`; og:image = a branded 1200×630 card (dark/amber) with two amber pins reading "14 Mitglieder" and "9 Städte" (absolute-URL `og.png` at repo root), `twitter:card=summary_large_image`.
 - [Build the page](tickets/005-build-the-page.md) — production `index.html` + standalone `data.js` at the repo root: the "Alles im Pin" clustering pins view and the Treffpunkt-Check fairness checker merged into one MapLibre/Liberty page (both approved prototypes ported). Member data (`window.STAMMTISCH`) lives in `data.js` with an inline "how to add/move a member" header. Logic + wiring verified locally; on-device GL paint deferred to ship (WebGL context lost in headless, per the spec caveat).
+- [Ship it live](tickets/006-ship-it-live.md) — **DESTINATION REACHED**: live at **https://alp82.github.io/finanz-stammtisch/** (`b3df2fb` → `main`, Pages published in ~32s). Ticket 7's sharing polish (missing from the build) was baked in at ship: `favicon.svg`, branded `og.png` card, full OG/Twitter/theme-color head. All assets 200; DOM + Treffpunkt-Check render with zero JS errors. Only the GL map paint + first chat-preview eyeball remain for the user on a real device — WebGL is disabled in the headless sandbox (env limit, not a defect).
 
 ## Not yet specified
 
 <!-- empty: the "how to add/move a member" note graduated into data.js's header comment when the data format was decided in Build the page. -->
-_(none — the way to the destination is one step: ship it live.)_
+_(none — destination reached; the map is complete. Live: https://alp82.github.io/finanz-stammtisch/)_
 
 ## Out of scope
 
