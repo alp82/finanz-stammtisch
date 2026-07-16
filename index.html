@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finanz-Stammtisch – Karte</title>
+<meta name="theme-color" content="#101418">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://alp82.github.io/finanz-stammtisch/">
+<meta property="og:title" content="Finanz-Stammtisch – Karte">
+<meta property="og:description" content="14 Mitglieder in 9 Städten">
+<meta property="og:image" content="https://alp82.github.io/finanz-stammtisch/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Finanz-Stammtisch – Karte">
+<meta name="twitter:description" content="14 Mitglieder in 9 Städten">
+<meta name="twitter:image" content="https://alp82.github.io/finanz-stammtisch/og.png">
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#101418; --ink:#e8e6e1; --muted:#8b9199; --muted2:#6b7178;
+    --amber:#f59e0b; --far:#ef6a4d; --near:#5aa06a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: Inter, system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+  #app { display: flex; height: 100vh; }
+
+  /* ---------- sidebar ---------- */
+  #side { width: 320px; flex: 0 0 320px; height: 100%; background: var(--bg); border-right: 1px solid #1c2228; display: flex; flex-direction: column; }
+  .side-head { padding: 24px 22px 16px; border-bottom: 1px solid #1c2228; }
+  .brand { font-family: Fraunces, serif; font-weight: 900; font-size: 27px; line-height: 1.05; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+  .side-scroll { overflow-y: auto; flex: 1; }
+
+  /* city list */
+  .cities { padding: 12px 12px 6px; }
+  .b-city { padding: 10px 12px; border-radius: 10px; cursor: pointer; margin-bottom: 2px; transition: background .15s; }
+  .b-city:hover, .b-city.active { background: #1c232b; }
+  .b-city .c { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .b-city .c .n { font-weight: 600; font-size: 14px; }
+  .b-city .c .k { font-size: 11px; color: #101418; background: var(--amber); font-weight: 700; border-radius: 99px; padding: 2px 8px; }
+  .b-city .m { font-size: 12.5px; color: #9aa3ad; margin-top: 3px; line-height: 1.5; }
+
+  /* Treffpunkt-Check panel */
+  .panel { padding: 16px; border-top: 1px solid #1c2228; }
+  .panel-kick { font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted2); }
+  .picker { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .picker select { flex: 1; background: #0b0e11; color: var(--ink); border: 1px solid #2a333c; border-radius: 9px; padding: 9px 10px; font: inherit; font-size: 14px; font-weight: 600; }
+  .prompt { color: var(--muted2); font-size: 13px; font-style: italic; margin-top: 14px; line-height: 1.5; }
+
+  .summary { display: flex; gap: 8px; margin-top: 14px; }
+  .stat { flex: 1; background: #12171c; border: 1px solid #1f262d; border-radius: 11px; padding: 10px 12px; }
+  .stat .n { font-family: Fraunces, serif; font-weight: 900; font-size: 19px; }
+  .stat .l { font-size: 10px; color: var(--muted2); text-transform: uppercase; letter-spacing: .6px; margin-top: 2px; }
+  .stat.worst { border-color: #3a2a24; background: #1c1512; }
+  .stat.worst .n { color: var(--far); }
+  .stat.worst .who { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+  .dist-list { margin-top: 14px; }
+  .dist-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+  .dist-row .nm { width: 62px; flex: 0 0 62px; font-size: 12.5px; }
+  .dist-row .bar { flex: 1; height: 8px; background: #171c22; border-radius: 99px; overflow: hidden; }
+  .dist-row .bar i { display: block; height: 100%; border-radius: 99px; }
+  .dist-row .km { width: 52px; flex: 0 0 52px; text-align: right; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .dist-row.worst .nm { color: var(--far); font-weight: 600; }
+  .dist-row.worst .km { color: var(--far); }
+  .dist-row.home .nm { color: var(--near); }
+
+  /* attendee filter */
+  .att { padding: 14px 12px 28px; border-top: 1px solid #1c2228; }
+  .att-head { display: flex; align-items: center; justify-content: space-between; padding: 0 8px 2px; }
+  .att-head .t { font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted2); }
+  .att-head button { background: none; border: none; color: var(--amber); font: inherit; font-size: 11.5px; cursor: pointer; }
+  .att-count { font-size: 11.5px; color: var(--muted); padding: 4px 8px 6px; }
+  .cg-name { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted2); padding: 8px 8px 2px; }
+  .mrow { display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: 8px; cursor: pointer; user-select: none; }
+  .mrow:hover { background: #12171c; }
+  .mrow .dot { width: 15px; height: 15px; flex: 0 0 15px; border-radius: 5px; border: 1.5px solid #3a444e; display: grid; place-items: center; }
+  .mrow.on .dot { background: var(--amber); border-color: var(--amber); }
+  .mrow .dot svg { width: 9px; height: 9px; opacity: 0; }
+  .mrow.on .dot svg { opacity: 1; }
+  .mrow .nm { font-size: 13px; }
+  .mrow.off .nm { color: var(--muted2); text-decoration: line-through; }
+
+  /* ---------- map ---------- */
+  #map { flex: 1; height: 100%; }
+
+  /* variant-E card pins: all info inside, no popups */
+  .pinE { position: relative; background: rgba(16,20,24,.92); color: var(--ink); border-radius: 12px; padding: 8px 12px; box-shadow: 0 3px 12px rgba(0,0,0,.35); font-size: 12px; line-height: 1.45; cursor: pointer; }
+  .pinE::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%); border: 10px solid transparent; }
+  .pinE.tail-b::after { top: 100%; border-top-color: rgba(16,20,24,.92); }
+  .pinE.tail-t::after { bottom: 100%; border-bottom-color: rgba(16,20,24,.92); }
+  .pinE .hd { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+  .pinE .hd .k { background: var(--amber); color: #101418; border-radius: 99px; min-width: 19px; height: 19px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; padding: 0 5px; font-family: Fraunces, serif; }
+  .pinE .hd .c { color: var(--amber); text-transform: uppercase; letter-spacing: .07em; font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+  .pinE .nm { white-space: nowrap; }
+  .pinE .nm.wrap { white-space: normal; max-width: 230px; }
+  .pinE .nm.wrap div { margin-top: 2px; }
+  .pinE .cc { color: var(--amber); font-weight: 600; }
+  .pinE.big { font-size: 13.5px; border-radius: 14px; padding: 10px 14px; }
+  .pinE.big .hd .k { min-width: 23px; height: 23px; font-size: 13px; }
+  .pinE.big .hd .c { font-size: 12px; }
+  .pinE.sel { box-shadow: 0 0 0 2px var(--amber), 0 3px 12px rgba(0,0,0,.45); }
+
+  /* neutral candidate pins (dashed hollow) */
+  .npin { position: relative; }
+  .npin .dot { width: 16px; height: 16px; border-radius: 50%; background: #101418; border: 2px dashed #4a555f; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+  .npin.sel .dot { border-style: solid; border-color: var(--amber); box-shadow: 0 0 0 5px rgba(245,158,11,.2), 0 2px 8px rgba(0,0,0,.6); }
+  .npin .lbl { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 2px; white-space: nowrap; font-size: 10px; color: var(--muted); text-shadow: 0 1px 3px #000; pointer-events: none; }
+
+  @media (max-width: 720px) {
+    #app { flex-direction: column; }
+    #side { width: 100%; flex: 0 0 45%; border-right: none; border-bottom: 1px solid #1c2228; }
+    #map { flex: 1 1 55%; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="side">
+    <div class="side-head">
+      <div class="brand">Finanz-Stammtisch</div>
+      <div class="sub" id="subline"></div>
+    </div>
+    <div class="side-scroll">
+      <div class="cities" id="cityList"></div>
+      <div class="panel">
+        <div class="panel-kick">Treffpunkt-Check &middot; treffen hier?</div>
+        <div class="picker"><select id="citySel"></select></div>
+        <div id="readout"></div>
+      </div>
+      <div class="att">
+        <div class="att-head"><span class="t">Wer kommt?</span><button id="toggleAll"></button></div>
+        <div class="att-count" id="attCount"></div>
+        <div id="attList"></div>
+      </div>
+    </div>
+  </aside>
+  <div id="map"></div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const DATA = window.STAMMTISCH;
+
+// derive per-city groupings from the flat member list
+const byCity = {};
+DATA.members.forEach(m => (byCity[m.city] = byCity[m.city] || []).push(m.name));
+const CITIES = Object.keys(byCity).map(city => ({ city, members: byCity[city], coords: DATA.cities[city] }));
+const N_MEMBERS = DATA.members.length;
+const N_CITIES = CITIES.length;
+
+// members with coords + attendance, for the Treffpunkt-Check
+const MEMBERS = DATA.members.map((m, i) => ({ id: i, name: m.name, city: m.city, attending: true, coords: DATA.cities[m.city] }));
+const coordOf = city => DATA.cities[city] || DATA.neutral[city];
+
+const GERMANY = [[5.5, 47.1], [15.6, 55.2]];
+const R = 6371, rad = d => d * Math.PI / 180;
+function distKm(a, b) { // a, b are [lon, lat]
+  const dLat = rad(b[1] - a[1]), dLon = rad(b[0] - a[0]);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a[1])) * Math.cos(rad(b[1])) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+// zoom at which two points dKm apart sit ~260px apart (card width + margin)
+function sepZoom(dKm, lat) { return Math.log2(260 * 156543.03 * Math.cos(rad(lat)) / (dKm * 1000)); }
+
+document.getElementById("subline").textContent = N_MEMBERS + " Mitglieder in " + N_CITIES + " Städten";
+
+const map = new maplibregl.Map({
+  container: "map", style: "https://tiles.openfreemap.org/styles/liberty",
+  bounds: GERMANY, fitBoundsOptions: { padding: 60 }, attributionControl: { compact: true },
+});
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+
+/* ================= pins view (variant E: all info in the card) ================= */
+const TAIL = 11;          // px between the point and the card edge (tail height + 1)
+const MERGE_KM = 60;      // cities farther apart than this never share a cluster
+const clusterMarkers = {};
+
+const pins = CITIES.map(c => {
+  const el = document.createElement("div");
+  el.className = "pinE tail-b" + (c.members.length > 2 ? " big" : "");
+  let names = c.members.join(", ");
+  if (c.members.length > 3) {
+    const pairs = [];
+    for (let i = 0; i < c.members.length; i += 2) pairs.push(c.members.slice(i, i + 2).join(", "));
+    names = pairs.join(",<br>");
+  }
+  el.innerHTML = '<div class="hd"><span class="k">' + c.members.length + '</span><span class="c">' + c.city + '</span></div><div class="nm">' + names + '</div>';
+  el.title = c.city + " als Treffpunkt prüfen";
+  el.addEventListener("click", () => select(c.city));
+  const marker = new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat(c.coords).addTo(map);
+  return { c, el, marker };
+});
+
+function clusterContent(cs) {
+  const sorted = cs.slice().sort((a, b) => b.members.length - a.members.length);
+  const total = cs.reduce((n, c) => n + c.members.length, 0);
+  const joined = sorted.map(c => c.city).join(" · ");
+  const title = joined.length <= 24 ? joined : sorted[0].city + " & Umgebung";
+  const body = sorted.map(c => '<div><span class="cc">' + c.city + '</span> ' + c.members.join(", ") + '</div>').join("");
+  return '<div class="hd"><span class="k">' + total + '</span><span class="c">' + title + '</span></div><div class="nm wrap">' + body + '</div>';
+}
+
+function layout() {
+  // cache natural card sizes while visible (they change once the fonts land)
+  pins.forEach(p => { if (p.el.style.display !== "none" && p.el.offsetWidth) { p.w = p.el.offsetWidth; p.h = p.el.offsetHeight; } });
+  const pts = pins.map(p => map.project(p.c.coords));
+  const root = pins.map((_, i) => i);
+  const find = i => root[i] === i ? i : (root[i] = find(root[i]));
+  const rectOverlap = (a, b) =>
+    Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) *
+    Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+
+  let active = {};
+  for (let pass = 0; pass < 12; pass++) {
+    active = {};
+    const groups = {};
+    pins.forEach((p, i) => { const r = find(i); (groups[r] = groups[r] || []).push(i); });
+    const items = [];
+    for (const g of Object.values(groups)) {
+      if (g.length === 1) {
+        const p = pins[g[0]];
+        p.el.style.display = "";
+        items.push({ g, el: p.el, marker: p.marker, px: pts[g[0]] });
+      } else {
+        g.forEach(i => { pins[i].el.style.display = "none"; });
+        const key = g.map(i => pins[i].c.city).sort().join("|");
+        active[key] = true;
+        let cm = clusterMarkers[key];
+        if (!cm) {
+          const el = document.createElement("div");
+          el.className = "pinE big tail-b";
+          el.innerHTML = clusterContent(g.map(i => pins[i].c));
+          el.title = "Klicken zum Auflösen";
+          cm = clusterMarkers[key] = { el, marker: new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat([0, 0]).addTo(map) };
+          const members = g.slice();
+          el.addEventListener("click", () => {
+            let dmin = Infinity;
+            for (const i of members) for (const j of members) if (i < j)
+              dmin = Math.min(dmin, distKm(pins[i].c.coords, pins[j].c.coords));
+            const ll = cm.marker.getLngLat();
+            map.flyTo({ center: ll, zoom: Math.min(Math.max(sepZoom(dmin, ll.lat), map.getZoom() + 0.6), 12), duration: 900 });
+          });
+        }
+        const cx = g.reduce((s, i) => s + pts[i].x, 0) / g.length;
+        const cy = g.reduce((s, i) => s + pts[i].y, 0) / g.length;
+        cm.marker.setLngLat(map.unproject([cx, cy]));
+        items.push({ g, el: cm.el, marker: cm.marker, px: { x: cx, y: cy } });
+      }
+    }
+    // above/below placement, north to south, least overlap wins
+    const placed = [];
+    items.sort((a, b) => a.px.y - b.px.y);
+    for (const it of items) {
+      const w = it.el.offsetWidth, h = it.el.offsetHeight;
+      const above = { x: it.px.x - w / 2, y: it.px.y - TAIL - h, w, h, it };
+      const below = { x: it.px.x - w / 2, y: it.px.y + TAIL, w, h, it };
+      const useBelow = placed.reduce((s, r) => s + rectOverlap(below, r), 0) <
+                       placed.reduce((s, r) => s + rectOverlap(above, r), 0);
+      placed.push(useBelow ? below : above);
+      it.marker.setOffset([0, (h / 2 + TAIL) * (useBelow ? 1 : -1)]);
+      it.el.classList.toggle("tail-t", useBelow);
+      it.el.classList.toggle("tail-b", !useBelow);
+      it.el.style.zIndex = String(1000 - Math.round(w));
+    }
+    // merge the worst-colliding pair only, then re-run - one pair at a time
+    // keeps groupings geographically tight. Merge only on substantial overlap
+    // (>15% of the smaller card) and only if every involved city is within
+    // MERGE_KM; far-apart cities stay separate and overlap a little instead.
+    let best = null, bestOv = 0;
+    for (let i = 0; i < placed.length; i++) for (let j = i + 1; j < placed.length; j++) {
+      const a = placed[i], b = placed[j];
+      const ov = rectOverlap(a, b);
+      if (ov <= Math.max(bestOv, 0.15 * Math.min(a.w * a.h, b.w * b.h))) continue;
+      if (find(a.it.g[0]) === find(b.it.g[0])) continue;
+      let far = false;
+      for (const gi of a.it.g) for (const gj of b.it.g)
+        if (distKm(pins[gi].c.coords, pins[gj].c.coords) > MERGE_KM) far = true;
+      if (far) continue;
+      bestOv = ov; best = [i, j];
+    }
+    if (!best) break;
+    root[find(placed[best[1]].it.g[0])] = find(placed[best[0]].it.g[0]);
+  }
+  for (const key of Object.keys(clusterMarkers)) {
+    if (!active[key]) { clusterMarkers[key].marker.remove(); delete clusterMarkers[key]; }
+  }
+  markSelection();
+}
+
+// sidebar city list: click flies to the zoom where the city stands alone
+function aloneZoom(c) {
+  let dmin = Infinity;
+  for (const o of CITIES) if (o !== c) dmin = Math.min(dmin, distKm(c.coords, o.coords));
+  return Math.min(Math.max(sepZoom(dmin, c.coords[1]), 8), 12);
+}
+(function buildCityList() {
+  const list = document.getElementById("cityList");
+  CITIES.slice().sort((a, b) => b.members.length - a.members.length).forEach(c => {
+    const row = document.createElement("div");
+    row.className = "b-city";
+    row.dataset.city = c.city;
+    row.innerHTML = '<div class="c"><span class="n">' + c.city + '</span><span class="k">' + c.members.length + '</span></div><div class="m">' + c.members.join(", ") + '</div>';
+    row.addEventListener("click", () => {
+      document.querySelectorAll(".b-city").forEach(r => r.classList.remove("active"));
+      row.classList.add("active");
+      map.flyTo({ center: c.coords, zoom: aloneZoom(c), duration: 900 });
+    });
+    list.appendChild(row);
+  });
+})();
+
+/* ================= Treffpunkt-Check (fairness checker) ================= */
+let selected = null;      // candidate city name (member or neutral)
+const neutralPins = {};
+
+map.on("load", () => {
+  map.addSource("spokes", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  map.addLayer({
+    id: "spokes", type: "line", source: "spokes",
+    paint: {
+      "line-width": ["interpolate", ["linear"], ["get", "n"], 0, 1.2, 1, 3.2],
+      "line-opacity": 0.85,
+      "line-color": ["interpolate", ["linear"], ["get", "n"], 0, "#5aa06a", 0.5, "#f59e0b", 1, "#ef6a4d"],
+    },
+  }, findFirstSymbolLayer());
+  drawNeutral();
+  layout();
+  recompute();
+});
+map.on("move", layout);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+
+// keep spokes under the map's own text labels for a cleaner read
+function findFirstSymbolLayer() {
+  const layers = map.getStyle().layers || [];
+  for (const l of layers) if (l.type === "symbol") return l.id;
+  return undefined;
+}
+
+function drawNeutral() {
+  for (const city in DATA.neutral) {
+    const wrap = document.createElement("div");
+    wrap.className = "npin";
+    wrap.innerHTML = '<div class="dot"></div><div class="lbl">' + city + '</div>';
+    wrap.title = city + " (neutral) als Treffpunkt prüfen";
+    wrap.addEventListener("click", () => select(city));
+    neutralPins[city] = wrap;
+    new maplibregl.Marker({ element: wrap, anchor: "center" }).setLngLat(DATA.neutral[city]).addTo(map);
+  }
+}
+
+function markSelection() {
+  pins.forEach(p => p.el.classList.toggle("sel", selected === p.c.city));
+  for (const city in neutralPins) neutralPins[city].classList.toggle("sel", selected === city);
+}
+
+function select(city) {
+  selected = city;
+  document.getElementById("citySel").value = city;
+  markSelection();
+  recompute();
+}
+
+const attending = () => MEMBERS.filter(m => m.attending);
+
+function recompute() {
+  const ro = document.getElementById("readout");
+  const a = attending();
+  const src = map.getSource("spokes");
+  if (!selected || !a.length) {
+    ro.innerHTML = '<div class="prompt">' + (!a.length
+      ? "Niemand ausgewählt."
+      : "Stadt wählen (Liste oben oder Pin auf der Karte) — dann siehst du, wie weit jede:r fährt und wer es am weitesten hat.") + '</div>';
+    if (src) src.setData({ type: "FeatureCollection", features: [] });
+    return;
+  }
+  const target = coordOf(selected);
+  const rows = a.map(m => ({ m, km: Math.round(distKm(m.coords, target)) })).sort((x, y) => x.km - y.km);
+  const max = Math.max(...rows.map(r => r.km), 1);
+  const worst = rows[rows.length - 1];
+  const avg = Math.round(rows.reduce((s, r) => s + r.km, 0) / rows.length);
+
+  ro.innerHTML =
+    '<div class="summary">' +
+      '<div class="stat"><div class="n">' + avg + ' km</div><div class="l">Ø pro Person</div></div>' +
+      '<div class="stat worst"><div class="n">' + worst.km + ' km</div><div class="l">weitester Weg</div><div class="who">' + worst.m.name + ' · ' + worst.m.city + '</div></div>' +
+    '</div>' +
+    '<div class="dist-list">' + rows.map(r => {
+      const n = r.km / max;
+      const col = r.km === 0 ? "var(--near)" : "hsl(" + Math.round(120 - 120 * n) + " 55% 52%)";
+      return '<div class="dist-row ' + (r.km === worst.km ? "worst" : "") + ' ' + (r.km === 0 ? "home" : "") + '">' +
+        '<span class="nm">' + r.m.name + '</span>' +
+        '<span class="bar"><i style="width:' + Math.max(n * 100, 3) + '%;background:' + col + '"></i></span>' +
+        '<span class="km">' + r.km + ' km</span></div>';
+    }).join("") + '</div>';
+
+  // map spokes from the candidate city to each attendee, graded near->far
+  const feats = rows.map(r => ({
+    type: "Feature", properties: { n: r.km / max },
+    geometry: { type: "LineString", coordinates: [target, r.m.coords] },
+  }));
+  if (src) src.setData({ type: "FeatureCollection", features: feats });
+}
+
+// candidate dropdown
+(function buildDropdown() {
+  const sel = document.getElementById("citySel");
+  const opt = list => list.map(c => '<option value="' + c + '">' + c + '</option>').join("");
+  sel.innerHTML = '<option value="">— Stadt wählen —</option>' +
+    '<optgroup label="Mitglied-Städte">' + opt(Object.keys(DATA.cities)) + '</optgroup>' +
+    '<optgroup label="Neutral / zentral">' + opt(Object.keys(DATA.neutral)) + '</optgroup>';
+  sel.addEventListener("change", () => {
+    if (sel.value) select(sel.value);
+    else { selected = null; markSelection(); recompute(); }
+  });
+})();
+
+// attendee filter "Wer kommt?"
+function buildAtt() {
+  const wrap = document.getElementById("attList");
+  wrap.innerHTML = "";
+  const grouped = {};
+  MEMBERS.forEach(m => (grouped[m.city] = grouped[m.city] || []).push(m));
+  Object.keys(grouped).sort((x, y) => grouped[y].length - grouped[x].length).forEach(city => {
+    const g = document.createElement("div");
+    g.innerHTML = '<div class="cg-name">' + city + '</div>';
+    grouped[city].forEach(m => {
+      const row = document.createElement("div");
+      row.className = "mrow " + (m.attending ? "on" : "off");
+      row.innerHTML = '<span class="dot"><svg viewBox="0 0 12 12"><path d="M2 6.5L5 9.5L10 3" stroke="#1a1205" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="nm">' + m.name + '</span>';
+      row.addEventListener("click", () => { m.attending = !m.attending; buildAtt(); recompute(); });
+      g.appendChild(row);
+    });
+    wrap.appendChild(g);
+  });
+  const on = attending().length;
+  document.getElementById("attCount").textContent = on === N_MEMBERS ? "Alle " + N_MEMBERS + " kommen." : on + " von " + N_MEMBERS + " kommen.";
+  document.getElementById("toggleAll").textContent = on ? "alle abwählen" : "alle auswählen";
+}
+document.getElementById("toggleAll").addEventListener("click", () => {
+  const any = attending().length > 0;
+  MEMBERS.forEach(m => m.attending = !any);
+  buildAtt(); recompute();
+});
+buildAtt();
+</script>
+</body>
+</html>

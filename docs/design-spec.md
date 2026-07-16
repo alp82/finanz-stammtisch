@@ -69,6 +69,43 @@ Recomputed on every map move/zoom:
   (inconsistent gaps and overlap-prone).
 - Hand-tuned per-city pixel offsets — replaced by the generic placement algorithm.
 
+## Meeting-city helper — "Treffpunkt-Check"
+
+Resolved by ticket [Design the real-life meeting-city helper](../.wayfinder/tickets/008-meeting-city-helper.md).
+Canonical reference: `.prototypes/meeting-city-checker.html` (approved by Alper 2026-07-16).
+
+**It is a fairness checker, not a recommender.** The group rotates meeting spots and travels
+by mixed car/train, so there is deliberately **no ranking, no auto-winner, nothing
+pre-selected**. The user brings a candidate city; the tool shows who travels how far and who
+has it worst. That's the whole job — the group still chooses.
+
+- **Pick a candidate city**: click a map pin *or* a sidebar dropdown. Candidates are the 9
+  member cities **plus** a small set of neutral central cities nobody lives in — Fulda,
+  Gießen, Würzburg, Marburg, Erfurt (dashed hollow pins; member pins stay amber). They can
+  meet somewhere neutral, so candidates aren't limited to member cities.
+- **Readout** (sidebar panel, under the pins list): for the picked city — **Ø km per person**,
+  the **weitester Weg** (the single worst-off attendee, named + city), and every attending
+  member sorted near→far with a green→red distance bar and km.
+- **On the map**: spokes drawn from the candidate city to each attending member, color-graded
+  green (near) → red (far); the picked pin is highlighted.
+- **Metric**: straight-line (haversine) km — a mode-agnostic proxy for both car and train.
+  **No ICE/transit weighting** (an earlier ICE-hub ranking was rejected — not everyone rides).
+- **Attendee filter "Wer kommt?"**: toggle who's coming this time; the readout re-scopes.
+  Because you toggle *individuals*, member-heavy cities pull proportionally for free
+  (Mainz's 5 count 5×) — one-person-one-vote by construction, no separate weight control.
+- **Empty by default**: starts with a "Tippe eine Stadt an" prompt; no city chosen until the
+  user picks one.
+- Sits inside the approved design language (dark sidebar, amber accent, Fraunces/Inter,
+  Liberty map) and coexists with the single pins view without a separate mode/toggle.
+
+Rejected on the way (round 1, `.prototypes/meeting-city-helper.html`, variants A/B/C): a single
+recommended member "Treffpunkt" (they don't meet in one fixed place), an ICE-hub ranked
+shortlist (mixed travel modes, not rail-optimized), and an abstract weighted "Schwerpunkt"
+centroid (not an actual city, and it barely moves since nearly everyone attends).
+
+Deferred enhancements (not v1, surface only if asked): drive-*time* instead of straight-line,
+side-by-side comparison of two candidates, dropping an arbitrary point that isn't in the list.
+
 ## Open caveats for build/ship
 
 - **Performance**: MapLibre needs working WebGL; on software-rendered browsers panning is

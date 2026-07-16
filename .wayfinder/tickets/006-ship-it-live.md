@@ -2,8 +2,8 @@
 id: 6
 title: Ship it live
 labels: [wayfinder:task]
-status: open
-assignee:
+status: claimed
+assignee: alp
 blocked-by: [4, 5, 7]
 ---
 
